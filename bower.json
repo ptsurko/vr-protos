@@ -1,0 +1,23 @@
+{
+  "name": "threejs",
+  "description": "",
+  "main": "orbit-controls.js",
+  "authors": [
+    "ptsurko <pavel.tsurko@gmail.com>"
+  ],
+  "license": "ISC",
+  "homepage": "https://github.com/ptsurko/vr-treemap",
+  "moduleType": [],
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "d3": "^3.5.16",
+    "jquery": "^2.2.0",
+    "dat-gui": "^0.5.1"
+  }
+}

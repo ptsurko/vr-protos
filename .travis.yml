@@ -1,0 +1,19 @@
+language: node_js
+node_js:
+  - 4.1
+env:
+  global:
+    - GH_REF: github.com/ptsurko/vr-treemap.git
+    - GIT_NAME: Travis-CI
+    - GIT_EMAIL: travis@nodemeatspace.com
+    - secure: vV6MKvs699lZMo1JhsMtNMwsdClC9PlgriH15UpL2sJxnYSD0M9jw756FuLAS0lq6y1/lqX9zjM8csbYogDdwfCz/+Ck20FPIJmvdXzgLo++EYH+/G+MdaA+Ie5t0v4G420GCwCg+Rc7GPyq3XpX4VrKKlQtn+G/PNfZTuv/wK9uzM13TW5My4vyOceDlmxFwC1lnAofbvEDv1CFA3vo08cGeryYyiWRQRlgNm7XDYs/1MIXeWM6l06JpZChlF3AUUlsa74/oxE5Nq8qJF7cBduyGqCcy4zudq9aX8AtKsce6n3i6tk9c14SKI05+1X3T3DvlQOy2rqKGXk1HZlsfl7EMVCZQMA18lRrSzkczU9/IZEI27FahSu2qGktvAJEE1mX6jhx0mnpPQu8URB6n78Yeb90/MnBd3XqmcgI5pp1Z+gsOFWTcxQNQAmr2hgoNPPrS12ZexFv5kXaAXk7Qp8UnKBmwS0L1fx9+8zG6Vzd6A6/RaiPs3sKMeYtDV2wTkjPo9v3IUWOzc5Y4HKkenBsI7A2BC3qKqXc4SAdxV85AFyGsuVPWPUNPnwLvH17hH3ZndLDG14r3Bultbc1ZxBzcHM9LNWw1UTONwefgjkD87mLlSsNAC3hJ/gF1xXE4VnzhU3RqDyWVaKlgRmS8Abvx1ObeKJp5B06Wccu9q4=
+before_install:
+  - chmod +x deploy_ghpages.sh
+before_script:
+  - npm install
+  - npm install -g bower
+  - bower install
+script: bash ./deploy_ghpages.sh
+branches:
+  only:
+    - master
