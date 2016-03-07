@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0, shrink-to-fit=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/manifest.json">
+    <title></title>
+    <style>
+      body{
+        margin: 0;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="Stats-output"></div>
+    <div id="viz"></div>
+    <script>
+      /*
+       * Debug parameters.
+       */
+      WebVRConfig = {
+        /**
+         * webvr-polyfill configuration
+         */
+        // Forces availability of VR mode.
+        FORCE_ENABLE_VR: true, // Default: false.
+        // Complementary filter coefficient. 0 for accelerometer, 1 for gyro.
+        //K_FILTER: 0.98, // Default: 0.98.
+        // How far into the future to predict during fast motion.
+        //PREDICTION_TIME_S: 0.040, // Default: 0.040 (in seconds).
+        // Flag to disable touch panner. In case you have your own touch controls
+        //TOUCH_PANNER_DISABLED: true, // Default: false.
+        // Enable yaw panning only, disabling roll and pitch. This can be useful for
+        // panoramas with nothing interesting above or below.
+        //YAW_ONLY: true, // Default: false.
+        /**
+         * webvr-boilerplate configuration
+         */
+        // Forces distortion in VR mode.
+        // FORCE_DISTORTION: true, // Default: false.
+        // Override the distortion background color.
+        // DISTORTION_BGCOLOR: {x: 1, y: 0, z: 0, w: 1}, // Default: (0,0,0,1).
+        // Prevent distortion from happening.
+        // PREVENT_DISTORTION: true, // Default: false.
+        // Show eye centers for debugging.
+        // SHOW_EYE_CENTERS: true, // Default: false.
+        // Prevent the online DPDB from being fetched.
+        // NO_DPDB_FETCH: true,  // Default: false.
+      };
+    </script>
+    <script src="bower_components/d3/d3.js"></script>
+    <script src="bower_components/dat-gui/build/dat.gui.js"></script>
+    <script src="node_modules/three/three.min.js"></script>
+    <script src="node_modules/three/examples/js/controls/VRControls.js"></script>
+    <script src="node_modules/three/examples/js/effects/VREffect.js"></script>
+    <script src="node_modules/three/examples/js/effects/StereoEffect.js"></script>
+    <script src="node_modules/webvr-polyfill/build/webvr-polyfill.js"></script>
+    <script src="build/webvr-manager.js"></script>
+    <script src="build/stats.js"></script>
+    <script type="text/javascript">
+      function init(data) {
+        var stats = initStats();
+
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+
+        var renderer = new THREE.WebGLRenderer({antialias: true});
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setClearColor(0xEEEEEE);
+
+        document.getElementById("viz")
+          .appendChild(renderer.domElement);
+
+        var controls = new THREE.VRControls(camera);
+
+        var effect = new THREE.VREffect(renderer);
+        effect.setSize(window.innerWidth, window.innerHeight);
+
+        var manager = new WebVRManager(renderer, effect, {
+          hideButton: false, // Default: false.
+          isUndistorted: false // Default: false.
+        });
+
+        var vizConfig = {
+          angle: 2 * Math.PI,
+          segments: 5,
+          radius: 16,
+          height: 20,
+          mode: 'squarify',
+          wireframes: true
+        };
+
+        var floorMesh;
+        var treemapMesh;
+
+        var gui = new dat.GUI();
+        gui.add(vizConfig, 'angle', 0, 2 * Math.PI).onChange(function() { redrawScene(data); });
+        gui.add(vizConfig, 'segments', 1, 20).step(1).onChange(function() { redrawScene(data); });
+        gui.add(vizConfig, 'radius', 1, 100).step(1).onChange(function() { redrawScene(data); });
+        gui.add(vizConfig, 'height', 10, 100).step(1).onChange(function() { redrawScene(data); });
+        gui.add(vizConfig, 'mode', ['squarify', 'slice', 'dice', 'slice-dice']).onChange(function() { redrawScene(data); });
+        gui.add(vizConfig, 'wireframes').onChange(function() { redrawScene(data); });
+
+        redrawScene(data);
+        animate();
+
+        function redrawScene(data) {
+          var treemap = d3.layout.treemap()
+            .size([2 * Math.PI * vizConfig.radius, vizConfig.height])
+            .mode(vizConfig.mode)
+            .value(function(d) { return d.size; });
+
+          var nodes = treemap.nodes(data);
+
+          scene.remove(floorMesh);
+          scene.remove(treemapMesh);
+
+          floorMesh = buildFloor();
+          treemapMesh = buildTreemap(nodes);
+
+          scene.add(floorMesh);
+          scene.add(treemapMesh);
+        }
+
+        function buildFloor() {
+          var floorTexture = new THREE.ImageUtils.loadTexture( 'images/checkerboard.jpg' );
+        	floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
+        	floorTexture.repeat.set( 5, 5 );
+
+        	var floorMaterial = new THREE.MeshBasicMaterial( { map: floorTexture } );
+          var floorGeometry = new THREE.PlaneGeometry(vizConfig.radius * 2, vizConfig.radius * 2, 1, 1);
+          var floor = new THREE.Mesh(floorGeometry, floorMaterial);
+
+          floor.rotation.x = -0.5 * Math.PI;
+          floor.position.y = -(vizConfig.height / 2);
+          floor.position.x = 0;
+          floor.position.z = 0;
+
+          return floor;
+        }
+
+        function buildTreemap(nodes) {
+          var treemapGeometry = new TreemapGeometry(nodes, vizConfig.radius, vizConfig.height, vizConfig.angle, vizConfig.segments);
+
+          var materials = [new THREE.MeshBasicMaterial({color: 0xffffff, vertexColors: THREE.FaceColors})];
+          if (vizConfig.wireframes) {
+            materials.push(new THREE.MeshBasicMaterial({color: 0x000000, wireframe: true}));
+          }
+          return THREE.SceneUtils.createMultiMaterialObject(treemapGeometry, materials);
+        }
+
+        function animate() {
+          stats.update();
+
+          requestAnimationFrame( animate );
+          controls.update();
+          manager.render(scene, camera);
+        }
+
+        function initStats() {
+          var stats = new Stats();
+          stats.setMode(0); // 0: fps, 1: ms
+
+          stats.domElement.style.position = 'absolute';
+          stats.domElement.style.left = '0px';
+          stats.domElement.style.top = '0px';
+
+          document.getElementById("Stats-output").appendChild(stats.domElement);
+
+          return stats;
+        }
+      }
+
+      function TreemapGeometry(nodes, radius, height, angle, segments) {
+        THREE.Geometry.call(this);
+
+        var treemapWidth = 2 * Math.PI * radius;
+        var startAngle = (Math.PI * 3 - angle) / 2;
+
+        var verticeIndex = 0;
+        nodes.forEach(function(node) {
+          if (node.size && node.dx && node.dy) {
+            var dx = node.dx / segments;
+            if (!node.color) {
+              node.color = new THREE.Color(Math.random(), Math.random(), Math.random());
+            }
+
+            for(var i = 0; i <= segments; i++) {
+              var segmentX = node.x + dx * i;
+
+              var phi = startAngle + segmentX / treemapWidth * angle;
+              var x = radius * Math.cos(phi);
+              var y = -(height / 2) + node.y;
+              var z = radius * Math.sin(phi);
+
+              this.vertices.push(new THREE.Vector3(x, y, z));
+              this.vertices.push(new THREE.Vector3(x, y + node.dy, z));
+
+              if (i > 0) {
+                var j = verticeIndex + (i - 1) * 2;
+                this.faces.push(new THREE.Face3(j + 1, j, j + 2, null, node.color));
+                this.faces.push(new THREE.Face3(j + 1, j + 2, j + 3, null, node.color));
+              }
+            }
+            verticeIndex += (segments + 1) * 2;
+          }
+        }.bind(this));
+      }
+      TreemapGeometry.prototype = Object.create(THREE.Geometry.prototype);
+      TreemapGeometry.prototype.constructor = TreemapGeometry;
+
+      window.onload = function() {
+        d3.json("flare1.json", function (error, data) {
+          init(data);
+        });
+      };
+    </script>
+  </body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0, shrink-to-fit=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/manifest.json">
+    <title></title>
+    <style>
+      body{
+        margin: 0;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="viz"></div>
+    <script>
+      /*
+       * Debug parameters.
+       */
+      WebVRConfig = {
+        /**
+         * webvr-polyfill configuration
+         */
+        // Forces availability of VR mode.
+        FORCE_ENABLE_VR: true, // Default: false.
+        // Complementary filter coefficient. 0 for accelerometer, 1 for gyro.
+        //K_FILTER: 0.98, // Default: 0.98.
+        // How far into the future to predict during fast motion.
+        //PREDICTION_TIME_S: 0.040, // Default: 0.040 (in seconds).
+        // Flag to disable touch panner. In case you have your own touch controls
+        //TOUCH_PANNER_DISABLED: true, // Default: false.
+        // Enable yaw panning only, disabling roll and pitch. This can be useful for
+        // panoramas with nothing interesting above or below.
+        //YAW_ONLY: true, // Default: false.
+        /**
+         * webvr-boilerplate configuration
+         */
+        // Forces distortion in VR mode.
+        // FORCE_DISTORTION: true, // Default: false.
+        // Override the distortion background color.
+        // DISTORTION_BGCOLOR: {x: 1, y: 0, z: 0, w: 1}, // Default: (0,0,0,1).
+        // Prevent distortion from happening.
+        // PREVENT_DISTORTION: true, // Default: false.
+        // Show eye centers for debugging.
+        // SHOW_EYE_CENTERS: true, // Default: false.
+        // Prevent the online DPDB from being fetched.
+        // NO_DPDB_FETCH: true,  // Default: false.
+      };
+    </script>
+    <!-- <script src="bower_components/three.js/build/three.js"></script> -->
+    <script src="node_modules/three/three.min.js"></script>
+    <script src="node_modules/three/examples/js/controls/VRControls.js"></script>
+    <script src="node_modules/three/examples/js/effects/VREffect.js"></script>
+    <script src="node_modules/three/examples/js/effects/StereoEffect.js"></script>
+    <script src="node_modules/webvr-polyfill/build/webvr-polyfill.js"></script>
+    <script src="build/webvr-manager.js"></script>
+    <script type="text/javascript">
+
+      var camera, controls, scene, renderer, manager;
+      function init() {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+
+        renderer = new THREE.WebGLRenderer({antialias: true});
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setClearColor(0xEEEEEE);
+
+        document.getElementById("viz")
+            .appendChild(renderer.domElement);
+
+        controls = new THREE.VRControls(camera);
+
+        var effect = new THREE.VREffect(renderer);
+        effect.setSize(window.innerWidth, window.innerHeight);
+
+        manager = new WebVRManager(renderer, effect, {
+          hideButton: false, // Default: false.
+          isUndistorted: false // Default: false.
+        });
+
+        for(var i = 0; i < 5; i++) {
+          var height = Math.ceil((Math.random() * 6));
+          var cubeGeometry = new THREE.BoxGeometry(1, height, 1);
+          var materials = [
+            new THREE.MeshBasicMaterial({color: Math.random() * 0xffffff}),
+            new THREE.MeshBasicMaterial({color: 0x000000, wireframe: true})
+          ];
+          var cube = THREE.SceneUtils.createMultiMaterialObject(cubeGeometry, materials); //new THREE.Mesh(cubeGeometry, cubeMaterial);
+
+
+          cube.position.x = -2 + i;
+
+          cube.position.y = height / 2 - 3;
+          cube.position.z = -5;
+
+          scene.add(cube);
+        }
+
+
+        for(var i = 0; i < 5; i++) {
+          var height = Math.ceil((Math.random() * 6));
+          var cubeGeometry = new THREE.BoxGeometry(1, height, 1);
+          var materials = [
+            new THREE.MeshBasicMaterial({color: Math.random() * 0xffffff}),
+            new THREE.MeshBasicMaterial({color: 0x000000, wireframe: true})
+          ];
+          var cube = THREE.SceneUtils.createMultiMaterialObject(cubeGeometry, materials); //new THREE.Mesh(cubeGeometry, cubeMaterial);
+
+
+          cube.position.z = -2 + i;
+
+          cube.position.y = height / 2 - 3;
+          cube.position.x = -5;
+
+          scene.add(cube);
+        }
+
+        for(var i = 0; i < 5; i++) {
+          var height = Math.ceil((Math.random() * 6));
+          var cubeGeometry = new THREE.BoxGeometry(1, height, 1);
+          var materials = [
+            new THREE.MeshBasicMaterial({color: Math.random() * 0xffffff}),
+            new THREE.MeshBasicMaterial({color: 0x000000, wireframe: true})
+          ];
+          var cube = THREE.SceneUtils.createMultiMaterialObject(cubeGeometry, materials); //new THREE.Mesh(cubeGeometry, cubeMaterial);
+
+
+          cube.position.z = -2 + i;
+
+          cube.position.y = height / 2 - 3;
+          cube.position.x = 5;
+
+          scene.add(cube);
+        }
+      }
+
+      function animate() {
+        requestAnimationFrame( animate );
+        controls.update(); // required if controls.enableDamping = true, or if controls.autoRotate = true
+        manager.render(scene, camera);
+      }
+
+      window.onload = function() {
+        init();
+        animate();
+      }
+    </script>
+  </body>
+</html>
