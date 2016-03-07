@@ -90,7 +90,8 @@
           segments: 5,
           radius: 16,
           height: 20,
-          mode: 'squarify'
+          mode: 'squarify',
+          wireframes: true
         };
 
         var floorMesh;
@@ -102,6 +103,7 @@
         gui.add(vizConfig, 'radius', 1, 100).step(1).onChange(function() { redrawScene(data); });
         gui.add(vizConfig, 'height', 10, 100).step(1).onChange(function() { redrawScene(data); });
         gui.add(vizConfig, 'mode', ['squarify', 'slice', 'dice', 'slice-dice']).onChange(function() { redrawScene(data); });
+        gui.add(vizConfig, 'wireframes').onChange(function() { redrawScene(data); });
 
         redrawScene(data);
         animate();
@@ -142,42 +144,13 @@
         }
 
         function buildTreemap(nodes) {
-          var treemapWidth = 2 * Math.PI * vizConfig.radius;
-          var startAngle = (Math.PI * 3 - vizConfig.angle) / 2;
+          var treemapGeometry = new TreemapGeometry(nodes, vizConfig.radius, vizConfig.height, vizConfig.angle, vizConfig.segments);
 
-          var treemapGeometry = new THREE.Geometry();
-          var verticeIndex = 0;
-          nodes.forEach(function(node) {
-            if (node.size && node.dx && node.dy) {
-              var dx = node.dx / vizConfig.segments;
-              var color = new THREE.Color(Math.random(), Math.random(), Math.random());
-
-              for(var i = 0; i <= vizConfig.segments; i++) {
-                var segmentX = node.x + dx * i;
-
-                var phi = startAngle + segmentX / treemapWidth * vizConfig.angle;
-                var x = vizConfig.radius * Math.cos(phi);
-                var y = -(vizConfig.height / 2) + node.y;
-                var z = vizConfig.radius * Math.sin(phi);
-
-                treemapGeometry.vertices.push(new THREE.Vector3(x, y, z));
-                treemapGeometry.vertices.push(new THREE.Vector3(x, y + node.dy, z));
-
-                if (i > 0) {
-                  var j = verticeIndex + (i - 1) * 2;
-                  treemapGeometry.faces.push(new THREE.Face3(j + 1, j, j + 2, null, color));
-                  treemapGeometry.faces.push(new THREE.Face3(j + 1, j + 2, j + 3, null, color));
-                }
-              }
-              verticeIndex += (vizConfig.segments + 1) * 2;
-            }
-          });
-
-          var material = new THREE.MeshBasicMaterial({
-            color: 0xffffff,
-            vertexColors: THREE.FaceColors
-          });
-          return new THREE.Mesh(treemapGeometry, material);
+          var materials = [new THREE.MeshBasicMaterial({color: 0xffffff, vertexColors: THREE.FaceColors})];
+          if (vizConfig.wireframes) {
+            materials.push(new THREE.MeshBasicMaterial({color: 0x000000, wireframe: true}));
+          }
+          return THREE.SceneUtils.createMultiMaterialObject(treemapGeometry, materials);
         }
 
         function animate() {
@@ -201,6 +174,44 @@
           return stats;
         }
       }
+
+      function TreemapGeometry(nodes, radius, height, angle, segments) {
+        THREE.Geometry.call(this);
+
+        var treemapWidth = 2 * Math.PI * radius;
+        var startAngle = (Math.PI * 3 - angle) / 2;
+
+        var verticeIndex = 0;
+        nodes.forEach(function(node) {
+          if (node.size && node.dx && node.dy) {
+            var dx = node.dx / segments;
+            if (!node.color) {
+              node.color = new THREE.Color(Math.random(), Math.random(), Math.random());
+            }
+
+            for(var i = 0; i <= segments; i++) {
+              var segmentX = node.x + dx * i;
+
+              var phi = startAngle + segmentX / treemapWidth * angle;
+              var x = radius * Math.cos(phi);
+              var y = -(height / 2) + node.y;
+              var z = radius * Math.sin(phi);
+
+              this.vertices.push(new THREE.Vector3(x, y, z));
+              this.vertices.push(new THREE.Vector3(x, y + node.dy, z));
+
+              if (i > 0) {
+                var j = verticeIndex + (i - 1) * 2;
+                this.faces.push(new THREE.Face3(j + 1, j, j + 2, null, node.color));
+                this.faces.push(new THREE.Face3(j + 1, j + 2, j + 3, null, node.color));
+              }
+            }
+            verticeIndex += (segments + 1) * 2;
+          }
+        }.bind(this));
+      }
+      TreemapGeometry.prototype = Object.create(THREE.Geometry.prototype);
+      TreemapGeometry.prototype.constructor = TreemapGeometry;
 
       window.onload = function() {
         d3.json("flare1.json", function (error, data) {

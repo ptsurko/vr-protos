@@ -1,7 +1,0 @@
-{
- "name": "flare",
- "children": [
-    {"name": "CommunityStructure", "size": 3812},
-    {"name": "1", "size": 1000}
-  ]
-}
