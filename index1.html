@@ -88,7 +88,8 @@
         var vizConfig = {
           angle: 2 * Math.PI,
           segments: 5,
-          radius: 16,
+          radius1: 16,
+          radius2: 16,
           height: 20,
           mode: 'squarify',
           wireframes: true
@@ -100,7 +101,8 @@
         var gui = new dat.GUI();
         gui.add(vizConfig, 'angle', 0, 2 * Math.PI).onChange(function() { redrawScene(data); });
         gui.add(vizConfig, 'segments', 1, 20).step(1).onChange(function() { redrawScene(data); });
-        gui.add(vizConfig, 'radius', 1, 100).step(1).onChange(function() { redrawScene(data); });
+        gui.add(vizConfig, 'radius1', 1, 100).step(1).onChange(function() { redrawScene(data); });
+        gui.add(vizConfig, 'radius2', 1, 100).step(1).onChange(function() { redrawScene(data); });
         gui.add(vizConfig, 'height', 10, 100).step(1).onChange(function() { redrawScene(data); });
         gui.add(vizConfig, 'mode', ['squarify', 'slice', 'dice', 'slice-dice']).onChange(function() { redrawScene(data); });
         gui.add(vizConfig, 'wireframes').onChange(function() { redrawScene(data); });
@@ -110,7 +112,7 @@
 
         function redrawScene(data) {
           var treemap = d3.layout.treemap()
-            .size([2 * Math.PI * vizConfig.radius, vizConfig.height])
+            .size([perimeter(vizConfig.radius1, vizConfig.radius2), vizConfig.height])
             .mode(vizConfig.mode)
             .value(function(d) { return d.size; });
 
@@ -132,7 +134,8 @@
         	floorTexture.repeat.set( 5, 5 );
 
         	var floorMaterial = new THREE.MeshBasicMaterial( { map: floorTexture } );
-          var floorGeometry = new THREE.PlaneGeometry(vizConfig.radius * 2, vizConfig.radius * 2, 1, 1);
+          var radius = Math.max(vizConfig.radius1, vizConfig.radius2);
+          var floorGeometry = new THREE.PlaneGeometry(radius * 2, radius * 2, 1, 1);
           var floor = new THREE.Mesh(floorGeometry, floorMaterial);
 
           floor.rotation.x = -0.5 * Math.PI;
@@ -144,7 +147,7 @@
         }
 
         function buildTreemap(nodes) {
-          var treemapGeometry = new TreemapGeometry(nodes, vizConfig.radius, vizConfig.height, vizConfig.angle, vizConfig.segments);
+          var treemapGeometry = new TreemapGeometry(nodes, vizConfig.radius1, vizConfig.radius2, vizConfig.height, vizConfig.angle, vizConfig.segments);
 
           var materials = [new THREE.MeshBasicMaterial({color: 0xffffff, vertexColors: THREE.FaceColors})];
           if (vizConfig.wireframes) {
@@ -175,10 +178,20 @@
         }
       }
 
-      function TreemapGeometry(nodes, radius, height, angle, segments) {
+      function perimeter(r1, r2) {
+        var h = (r1 - r2)* (r1 - r2) / ((r1 + r2) * (r1 + r2));
+        return Math.PI * (r1 + r2) * (1 + 3 * h / (10 + Math.sqrt(4 - 3 * h)))
+      }
+
+      function TreemapGeometry(nodes, radius1, radius2, height, angle, segments) {
         THREE.Geometry.call(this);
 
-        var treemapWidth = 2 * Math.PI * radius;
+        // var treemapWidth = 2 * Math.PI * radius;
+        var treemapWidth = perimeter(radius1, radius2);
+        console.log(radius1);
+        console.log(radius2);
+        console.log(treemapWidth);
+
         var startAngle = (Math.PI * 3 - angle) / 2;
 
         var verticeIndex = 0;
@@ -193,9 +206,9 @@
               var segmentX = node.x + dx * i;
 
               var phi = startAngle + segmentX / treemapWidth * angle;
-              var x = radius * Math.cos(phi);
+              var x = radius1 * Math.cos(phi);
               var y = -(height / 2) + node.y;
-              var z = radius * Math.sin(phi);
+              var z = radius2 * Math.sin(phi);
 
               this.vertices.push(new THREE.Vector3(x, y, z));
               this.vertices.push(new THREE.Vector3(x, y + node.dy, z));
