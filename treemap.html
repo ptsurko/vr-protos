@@ -117,6 +117,9 @@
             .value(function(d) { return d.size; });
 
           var nodes = treemap.nodes(data);
+          nodes = nodes.filter(function(node) {
+            return node.size && node.dx && node.dy;
+          });
 
           scene.remove(floorMesh);
           scene.remove(treemapMesh);
@@ -188,36 +191,33 @@
         THREE.Geometry.call(this);
 
         var treemapWidth = perimeter(radius1, radius2);
-
         var startAngle = (Math.PI * 3 - angle) / 2;
-
         var verticeIndex = 0;
+        
         nodes.forEach(function(node) {
-          if (node.size && node.dx && node.dy) {
-            var dx = node.dx / segments;
-            if (!node.color) {
-              node.color = new THREE.Color(Math.random(), Math.random(), Math.random());
-            }
-
-            for(var i = 0; i <= segments; i++) {
-              var segmentX = node.x + dx * i;
-
-              var phi = startAngle + segmentX / treemapWidth * angle;
-              var x = radius1 * Math.cos(phi);
-              var y = -(height / 2) + node.y;
-              var z = radius2 * Math.sin(phi);
-
-              this.vertices.push(new THREE.Vector3(x, y, z));
-              this.vertices.push(new THREE.Vector3(x, y + node.dy, z));
-
-              if (i > 0) {
-                var j = verticeIndex + (i - 1) * 2;
-                this.faces.push(new THREE.Face3(j + 1, j, j + 2, null, node.color));
-                this.faces.push(new THREE.Face3(j + 1, j + 2, j + 3, null, node.color));
-              }
-            }
-            verticeIndex += (segments + 1) * 2;
+          var dx = node.dx / segments;
+          if (!node.color) {
+            node.color = new THREE.Color(Math.random(), Math.random(), Math.random());
           }
+
+          for(var i = 0; i <= segments; i++) {
+            var segmentX = node.x + dx * i;
+
+            var phi = startAngle + segmentX / treemapWidth * angle;
+            var x = radius1 * Math.cos(phi);
+            var y = -(height / 2) + node.y;
+            var z = radius2 * Math.sin(phi);
+
+            this.vertices.push(new THREE.Vector3(x, y, z));
+            this.vertices.push(new THREE.Vector3(x, y + node.dy, z));
+
+            if (i > 0) {
+              var j = verticeIndex + (i - 1) * 2;
+              this.faces.push(new THREE.Face3(j + 1, j, j + 2, null, node.color));
+              this.faces.push(new THREE.Face3(j + 1, j + 2, j + 3, null, node.color));
+            }
+          }
+          verticeIndex += (segments + 1) * 2;
         }.bind(this));
       }
       TreemapGeometry.prototype = Object.create(THREE.Geometry.prototype);
